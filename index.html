@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cool King Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #111;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        #game {
+            border: 2px solid #000;
+            background-color: #222;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.7);
+            margin: 20px;
+        }
+        
+       #purchase {
+        background-color: #111;
+        color:#fff;
+        border: 2px solid #fff;
+       }
+        #start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        #skin-rules {
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .skin-button {
+            margin: 5px;
+            padding: 10px;
+            background-color: #444;
+            border: 2px solid #ffd700;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .skin-button:hover {
+            background-color: #666;
+        }
+        #countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #ffd700;
+            display: none;
+        }
+        #win-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #ffd700;
+            display: none;
+        }
+        #restart-button {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 10px 20px;
+            background-color: #444;
+            border: 2px solid #ffd700;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 5px;
+            display: none;
+        }
+        #restart-button:hover {
+            background-color: #666;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 14px;
+        }
+        #info2 {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 14px;
+            word-wrap: break-word;
+            width: 200px;
+        }
+        #buying{
+            position: absolute;
+            top: 130px;
+            width: 700px;
+            left: 270px;
+            height: 300px;
+            background-color: #111;
+            border: 2px solid #fff;
+            display: none;
+            overflow-x: scroll;
+    overflow-y:hidden;
+    white-space: nowrap;
+    float: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <canvas id="canvas" width="700" height="425"></canvas>
+        <div id="start-screen">
+            <div id="skin-rules">
+                Each player selects a skin with unique stats and appearance:<br>
+                - Speedy: Faster movement speed<br>
+                - Tough: Immune to speed boosts and mud, larger size<br>
+                - Tiny: Smaller size and slightly faster<br>
+                - Zoomer: Teleports forward with a trail (10s cooldown, stops at obstacles)<br>
+                - Heavy: Slower but larger, chance to stun opponent when they hit you<br>
+                - Sprinter: Slightly faster, can sprint for a burst of speed (10s cooldown)<br>
+                - Ghost: Becomes intangible to pass through obstacles (15s cooldown)<br>
+                - Bouncer: Pushes opponent away on contact (8s cooldown)<br>
+                - Warrior: When tagging opponent, opponent is stunned for longer<br>
+                - Shield: Blocks tags temporarily (15s cooldown)<br>
+                P1 selects first, then P2.
+            </div>
+            <div id="skin-selection"></div>
+        </div>
+        <div id="buying">e</div>
+        <div id="countdown">3</div>
+        <div id="win-message"></div>
+        <button id="restart-button">Restart</button>
+        <div id="info"></div>
+        <div id="info2">
+            <p id="p1money">Player 1: $100</p><br><p id="p2money">Player 2: $100</p><br><button id='purchase'onclick='toggleBuy()'>Buy/Upgrade Skins</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('start-screen');
+        const countdownEl = document.getElementById('countdown');
+        const winMessage = document.getElementById('win-message');
+        const restartButton = document.getElementById('restart-button');
+        const info = document.getElementById('info');
+        const info2=document.getElementById('info2');
+        const buyingScreen=document.getElementById('buying');
+        const skinSelection = document.getElementById('skin-selection');
+
+        const MAP_WIDTH = 1000;
+        const MAP_HEIGHT = 500;
+        const VIEW_WIDTH = 350;
+        const VIEW_HEIGHT = 350;
+        const MINI_WIDTH = 150;
+        const MINI_HEIGHT = 75;
+        const BASE_SPEED = 3;
+        const BASE_PLAYER_SIZE = 20;
+        const BASE_PLAYER_RADIUS = BASE_PLAYER_SIZE / 2;
+        const CROWN_SIZE = 20;
+        const BOOST_SIZE = 15;
+        const MUD_SIZE = 50;
+        const MUD_MULTIPLIER = 0.5;
+        const MUD_DEBUFF_DURATION = 1000;
+        const BOOST_DURATION = 5000;
+        const BOOST_MULTIPLIER = 2;
+        const STUN_DURATION = 1000;
+        const WIN_TIME = 30000;
+        const BOOST_SPAWN_INTERVAL = 15000;
+        var moneys=[100,100];
+        var unlocks=[[true,false,false,false,false,false,false,false,false,false],[true,false,false,false,false,false,false,false,false,false]];
+        var levels=[[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]];
+        var costs=[0,100,100,200,200,250,300,400,400,500];
+        var upgradeCosts=[50,60,70,80,90,100,110,120,130,140];
+        const maps = [
+            {
+                name: 'Open Field',
+                backgroundColor: '#228B22',
+                obstacles: [],
+                mudPatches: [
+                    new MudPatch(MAP_WIDTH * 0.3, MAP_HEIGHT * 0.3, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.7, MAP_HEIGHT * 0.7, MUD_SIZE)
+                ]
+            },
+            {
+                name: 'Maze',
+                backgroundColor: '#9F8F5E',
+                obstacles: [
+                    {x: 250, y: 100, w: 50, h: 250, c: '#000000'},
+                    {x: 750, y: 150, w: 50, h: 250, c: '#000000'},
+                    {x: 400, y: 200, w: 50, h: 300, c: '#000000'},
+                    {x: 600, y: 0, w: 50, h: 300, c: '#000000'}
+                ],
+                mudPatches: [
+                    new MudPatch(MAP_WIDTH * 0.5, MAP_HEIGHT * 0.5, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.1, MAP_HEIGHT * 0.1, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.7, MAP_HEIGHT * 0.7, MUD_SIZE)
+                ]
+            },
+            {
+                name: 'Crossroads',
+                backgroundColor: '#D3D3D3',
+                obstacles: [
+                    {x: MAP_WIDTH / 2 - 40, y: 50, w: 50, h: MAP_HEIGHT/2-100, c: '#808080'},
+                    {x: MAP_WIDTH / 2 - 40, y: MAP_HEIGHT/2+50, w: 50, h: MAP_HEIGHT/2-100, c: '#808080'},
+                    {x: 120, y: MAP_HEIGHT / 2 - 40, w: MAP_WIDTH/2-220, h: 110, c: '#808080'},
+                    {x: MAP_WIDTH/2+50, y: MAP_HEIGHT / 2 - 40, w: MAP_WIDTH/2-200, h: 110, c: '#808080'},
+                ],
+                mudPatches: [
+                    new MudPatch(MAP_WIDTH * 0.2, MAP_HEIGHT * 0.2, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.8, MAP_HEIGHT * 0.2, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.2, MAP_HEIGHT * 0.8, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.8, MAP_HEIGHT * 0.8, MUD_SIZE)
+                ]
+            },
+            {
+                name: 'Arena',
+                backgroundColor: '#36454F',
+                obstacles: [
+                    {x: MAP_WIDTH / 2 - 100, y: MAP_HEIGHT / 2 - 100, w: 200, h: 50,c: '#123456'},
+                    {x: MAP_WIDTH / 2 - 100, y: MAP_HEIGHT / 2 + 50, w: 200, h: 50,c: '#123456'},
+                ],
+                mudPatches: [
+                    new MudPatch(MAP_WIDTH * 0.3, MAP_HEIGHT * 0.3, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.7, MAP_HEIGHT * 0.7, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.3, MAP_HEIGHT * 0.7, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.7, MAP_HEIGHT * 0.3, MUD_SIZE)
+                ]
+            },
+            {
+                name: 'Tunnels',
+                backgroundColor: '#FFFFFF',
+                obstacles: [
+                    {x: 250, y: 30, w: 50, h: 100,c: '#90ee90'},
+                    {x: 50, y: 125, w: 150, h: 50,c: '#90ee90'},
+                    {x: 0, y: 275, w:200, h: 30,c: '#90ee90'},
+                    {x: 250, y: 250, w: 50, h: 200,c: '#90ee90'},
+                    {x: 500, y: 40, w: 50, h: 160,c: '#90ee90'},
+                    {x: 500, y: 250, w: 50, h: 100,c: '#90ee90'},
+                    {x: 750, y: 250, w: 50, h: 200,c: '#90ee90'},
+                    {x: 250, y: 375, w: 250, h: 50,c: '#90ee90'},
+                    {x: 750, y: 300, w: 200, h: 50,c: '#90ee90'},
+                    {x: 500, y: 125, w: 200, h: 50,c: '#90ee90'},
+                ],
+                mudPatches: [
+                    new MudPatch(MAP_WIDTH * 0.4, MAP_HEIGHT * 0.4, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.8, MAP_HEIGHT * 0.2, MUD_SIZE),
+                    new MudPatch(MAP_WIDTH * 0.1, MAP_HEIGHT * 0.9, MUD_SIZE)
+                ]
+            }
+        ];
+
+        const skins = {
+            speedy: {
+                name: 'Speedy',
+                speed: BASE_SPEED * 1.25,
+                size: BASE_PLAYER_SIZE,
+                color: '#ff0000',
+                draw: function(ctx, player) {
+                    ctx.fillStyle = player.stunned ? '#696969' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : this.color;
+                    ctx.beginPath();
+                    ctx.moveTo(player.x - this.size/2, player.y + this.size/2);
+                    ctx.lineTo(player.x + this.size/2, player.y + this.size/2);
+                    ctx.lineTo(player.x, player.y + this.size);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = player.stunned ? '#a9a9a9' : '#ffdab9';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, this.size/3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            },
+            tough: {
+                name: 'Tough',
+                speed: BASE_SPEED,
+                size: BASE_PLAYER_SIZE * 1.1,
+                color: '#808080',
+                immune: true,
+                draw: function(ctx, player) {
+                    ctx.fillStyle = player.stunned ? '#696969' : this.color;
+                    ctx.fillRect(player.x - this.size/2, player.y - this.size/2, this.size, this.size);
+                    ctx.fillStyle = player.stunned ? '#a9a9a9' : '#ffdab9';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, this.size/3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            },
+            tiny: {
+                name: 'Tiny',
+                speed: BASE_SPEED*1.15,
+                size: BASE_PLAYER_SIZE * 0.5,
+                color: '#00ff00',
+                draw: function(ctx, player) {
+                    let wwww=1;
+            if (player===player1&&player.skin&&player.skin.name==="Tiny"){
+                wwww=Math.pow(0.9,levels[0][2]);
+            }
+            if (player===player2&&player.skin&&player.skin.name==="Tiny"){
+                wwww=Math.pow(0.9,levels[1][2]);
+            }
+                    ctx.fillStyle = player.stunned ? '#696969' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : this.color;
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, this.size*wwww/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = player.stunned ? '#a9a9a9' : '#ffdab9';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y - this.size*wwww/4, this.size*wwww/4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            },
+            zoomer: {
+                name: 'Zoomer',
+                speed: BASE_SPEED,
+                size: BASE_PLAYER_SIZE,
+                color: '#00b7eb',
+                zoomCooldown: 5000,
+                zoomDistance: 100,
+                teleportTrail: [],
+                draw: function(ctx, player) {
+                    for (let i = 0; i < player.teleportTrail.length; i++) {
+                        const point = player.teleportTrail[i];
+                        ctx.globalAlpha = (1 - i / player.teleportTrail.length) * 0.5;
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, this.size / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.globalAlpha = 1.0;
+                    ctx.fillStyle = player.stunned ? '#696969' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : this.color;
+                    ctx.beginPath();
+                    ctx.moveTo(player.x - this.size/2, player.y);
+                    ctx.lineTo(player.x + this.size/2, player.y);
+                    ctx.lineTo(player.x, player.y - this.size);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = player.stunned ? '#a9a9a9' : '#ffdab9';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, this.size/3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            },
+            heavy: {
+                name: 'Heavy',
+                speed: BASE_SPEED * 0.9,
+                size: BASE_PLAYER_SIZE * 1.5,
+                color: '#4b0082',
+                draw: function(ctx, player) {
+                    ctx.fillStyle = player.stunned ? '#696969' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : this.color;
+                    ctx.fillRect(player.x - this.size/2, player.y - this.size/2, this.size, this.size);
+                    ctx.fillStyle = player.stunned ? '#a9a9a9' : '#ffdab9';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, this.size/3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            },
+            sprinter: {
+                name: 'Sprinter',
+                speed: BASE_SPEED * 1.15,
+                size: BASE_PLAYER_SIZE * 0.8,
+                color: '#ffa500',
+                sprintTimer: 0,
+                sprintDuration: 3000,
+                sprintCooldown: 10000,
+                sprintMultiplier: 1.5,
+                draw: function(ctx, player) {
+                    ctx.fillStyle = player.stunned ? '#696969' : player.sprintTimer > 0 ? '#ff4500' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : this.color;
+                    ctx.beginPath();
+                    ctx.moveTo(player.x - this.size/2, player.y + this.size/2);
+                    ctx.lineTo(player.x + this.size/2, player.y + this.size/2);
+                    ctx.lineTo(player.x, player.y - this.size);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = player.stunned ? '#a9a9a9' : '#ffdab9';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, this.size/3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            },
+            ghost: {
+                name: 'Ghost',
+                speed: BASE_SPEED,
+                size: BASE_PLAYER_SIZE,
+                color: '#ffffff',
+                ghostTimer: 0,
+                ghostCooldown: 15000,
+                ghostDuration: 5000,
+                draw: function(ctx, player) {
+                    ctx.globalAlpha = player.ghostTimer > 0 ? 0.5 : 1.0;
+                    ctx.fillStyle = player.stunned ? '#696969' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : this.color;
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, this.size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = player.stunned ? '#a9a9a9' : '#ffdab9';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y - this.size/4, this.size/4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                }
+            },
+            bouncer: {
+                name: 'Bouncer',
+                speed: BASE_SPEED,
+                size: BASE_PLAYER_SIZE,
+                color: '#ff69b4',
+                bounceTimer: 0,
+                bounceCooldown: 8000,
+                bounceForce: 350,
+                bounceDuration: 3000,
+                draw: function(ctx, player) {
+                    
+                    ctx.fillStyle = player.stunned ? '#696969' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : this.color;
+                    ctx.beginPath();
+                    if (player.shieldTimer > 0 && !player.stunned) {
+                        ctx.strokeStyle = '#ffd700';
+                    } else {
+                        ctx.strokeStyle='#CBC3E3';
+                    }
+                    ctx.moveTo(player.x - this.size/2, player.y + this.size/2);
+                    ctx.lineTo(player.x + this.size/2, player.y + this.size/2);
+                    ctx.lineTo(player.x, player.y - this.size/2);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = player.stunned ? '#a9a9a9' : '#ffdab9';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, this.size/3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            },
+            warrior: {
+                name: 'Warrior',
+                speed: BASE_SPEED,
+                size: BASE_PLAYER_SIZE,
+                stunMultiplier: 2,
+                color: '#c0c0c0',
+                draw: function(ctx, player) {
+                    ctx.fillStyle = player.stunned ? '#696969' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : this.color;
+                    ctx.beginPath();
+                    ctx.moveTo(player.x - this.size/2, player.y + this.size/2);
+                    ctx.lineTo(player.x + this.size/2, player.y + this.size/2);
+                    ctx.lineTo(player.x, player.y - this.size/2);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = player.stunned ? '#a9a9a9' : '#ffdab9';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, this.size/3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            },
+            shield: {
+                name: 'Shield',
+                speed: BASE_SPEED * 0.9,
+                size: BASE_PLAYER_SIZE * 1.1,
+                color: '#c0c0c0',
+                shieldTimer: 0,
+                shieldDuration: 5000,
+                shieldCooldown: 15000,
+                draw: function(ctx, player) {
+                    if (player.shieldTimer > 0 && !player.stunned) {
+                        ctx.strokeStyle = '#ffd700';
+                    } else {
+                        ctx.strokeStyle='#CBC3E3';
+                    }
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.arc(player.x, player.y, this.size/2 + 5, 0, Math.PI * 2);
+                        ctx.stroke();
+                    ctx.fillStyle = player.stunned ? '#696969' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : this.color;
+                    ctx.fillRect(player.x - this.size/2, player.y - this.size/2, this.size, this.size);
+                    ctx.fillStyle = player.stunned ? '#a9a9a9' : '#ffdab9';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, this.size/3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        };
+
+        let player1 = {
+            x: 100,
+            y: MAP_HEIGHT / 2,
+            dx: 0,
+            dy: 0,
+            hasCrown: false,
+            holdTime: 0,
+            stunned: false,
+            stunTimer: 0,
+            boostTimer: 0,
+            boostMultiplier: 1,
+            mudTimer: 0,
+            inMud: false,
+            skin: null,
+            zoomCooldown: 0,
+            sprintTimer: 0,
+            sprintCooldown: 0,
+            ghostTimer: 0,
+            ghostCooldown: 0,
+            bounceTimer: 0,
+            shieldTimer: 0,
+            shieldCooldown: 0,
+            bounceCooldown: 0,
+            teleportTrail: [],
+            color: '#ff0000'
+        };
+
+        let player2 = {
+            x: MAP_WIDTH - 100,
+            y: MAP_HEIGHT / 2,
+            dx: 0,
+            dy: 0,
+            hasCrown: false,
+            holdTime: 0,
+            stunned: false,
+            stunTimer: 0,
+            boostTimer: 0,
+            boostMultiplier: 1,
+            mudTimer: 0,
+            inMud: false,
+            skin: null,
+            zoomCooldown: 0,
+            sprintTimer: 0,
+            sprintCooldown: 0,
+            ghostTimer: 0,
+            ghostCooldown: 0,
+            bounceTimer: 0,
+            shieldTimer: 0,
+            shieldCooldown: 0,
+            bounceCooldown: 0,
+            teleportTrail: [],
+            color: '#0000ff'
+        };
+
+        let crown = {x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2, picked: false};
+        let speedBoosts = [];
+        let boostSpawnTimer = 0;
+        let currentMap = null;
+        let gameState = 'start';
+        let countdown = 3;
+        let countdownTimer = 1000;
+        const countdownInterval = 1000;
+        const keys = {};
+
+        function drawBackground() {
+            ctx.fillStyle = currentMap.backgroundColor;
+            ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+        }
+
+        function drawCrown(x, y) {
+            ctx.fillStyle = '#ffd700';
+            ctx.beginPath();
+            ctx.moveTo(x - CROWN_SIZE / 2, y + CROWN_SIZE / 2);
+            ctx.lineTo(x + CROWN_SIZE / 2, y + CROWN_SIZE / 2);
+            ctx.lineTo(x, y - CROWN_SIZE / 2);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawSpeedBoost(x, y) {
+            ctx.fillStyle = '#0000ff';
+            ctx.beginPath();
+            ctx.moveTo(x - BOOST_SIZE / 2, y + BOOST_SIZE / 2);
+            ctx.lineTo(x + BOOST_SIZE / 2, y);
+            ctx.lineTo(x - BOOST_SIZE / 2, y - BOOST_SIZE / 2);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function MudPatch(x, y, r) {
+            this.x = x;
+            this.y = y;
+            this.r = r;
+            this.draw = function(ctx) {
+                ctx.fillStyle = '#8b4513';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                ctx.fill();
+            };
+        }
+
+        function Obstacle(x, y, w, h, c) {
+            this.x = x;
+            this.y = y;
+            this.w = w;
+            this.h = h;
+            this.draw = function(ctx) {
+                ctx.fillStyle = c;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+            };
+        }
+        var y=0;
+        function setBoxUp() {
+            y=0;
+            buyingScreen.replaceChildren();
+            for (let skinName2 in skins){
+            var upgradebox=document.createElement("div");
+            upgradebox.class="upgradebox";
+            upgradebox.style.border="5px solid #fff";
+            upgradebox.style.padding="10px";
+            upgradebox.style.fontSize="20px";
+            var text1;
+            var onclick1;
+            if (unlocks[0][y]===true&&levels[0][y]!=10){
+               text1="P1 Upgrade for $"+upgradeCosts[levels[0][y]];
+               onclick1="upgradeSkin("+y+",0);";
+            } else if (unlocks[0][y]===true&&levels[0][y]===10) {
+                text1="P1 Max Level!";
+            } else {
+               text1="P1 Buy for $"+costs[y];
+               onclick1="buySkin("+y+",0);";
+            }
+           var p1upgrade="<button style='border: 2px solid #aaa; color:#111;font-size:20px;'onclick='"+onclick1+"'>"+text1+"</button>"
+           var text2;
+            var onclick2;
+            if (unlocks[1][y]===true&&levels[1][y]!=10){
+               text2="P2 Upgrade for $"+upgradeCosts[levels[1][y]];
+               onclick2="upgradeSkin("+y+",1);";
+            } else if (unlocks[1][y]===true&&levels[1][y]===10) {
+                text2="P2 Max Level!";
+            } else {
+               text2="P2 Buy for $"+costs[y];
+               onclick1="buySkin("+y+",1);";
+            }
+           var p2upgrade="<button style='border: 2px solid #aaa; color:#111;font-size:20px;'onclick='"+onclick2+"'>"+text2+"</button>"
+            
+            if (unlocks[0][y]===true && unlocks[1][y]===true){
+                upgradebox.innerHTML=skins[skinName2].name+"<br>P1: Level "+levels[0][y]+"<br>P2: Level "+levels[1][y]+"<br>";
+            } else if (unlocks[0][y]===true && unlocks[1][y]===false){
+                upgradebox.innerHTML=skins[skinName2].name+"<br>P1: Level "+levels[0][y]+"<br>P2: Not Unlocked"+"<br>";
+            } else if (unlocks[0][y]===false && unlocks[1][y]===true){
+                upgradebox.innerHTML=skins[skinName2].name+"<br>P1: Not Unlocked<br>P2: Level "+levels[1][y]+"<br>";
+            } else{
+                upgradebox.innerHTML=skins[skinName2].name+"<br>P1: Not Unlocked<br>P2: Not Unlocked"+"<br>";
+            }
+            upgradebox.innerHTML+=p1upgrade;
+            upgradebox.innerHTML+="<br>";
+            upgradebox.innerHTML+=p2upgrade;
+            buyingScreen.appendChild(upgradebox);
+            y+=1;
+            }
+        }
+        function buySkin(whichSkin,whichPlayer){
+            if (whichPlayer===0&&moneys[0]>=costs[whichSkin]){
+                unlocks[0][whichSkin]=true;
+                moneys[0]-=costs[whichSkin];
+                setBoxUp();
+            }
+            if (whichPlayer===1&&moneys[1]>=costs[whichSkin]){
+                unlocks[1][whichSkin]=true;
+                moneys[1]-=costs[whichSkin];
+                setBoxUp();
+            }
+            document.getElementById("p1money").innerHTML="Player 1: $"+moneys[0];
+            document.getElementById("p2money").innerHTML="Player 2: $"+moneys[1];
+        }
+        function upgradeSkin(whichUpSkin,whichUpPlayer){
+            if (whichUpPlayer===0&&moneys[0]>=upgradeCosts[whichUpSkin]){
+                levels[0][whichUpSkin]+=true;
+                moneys[0]-=upgradeCosts[whichUpSkin];
+                setBoxUp();
+            }
+            if (whichUpPlayer===1&&moneys[1]>=upgradeCosts[whichUpSkin]){
+                levels[1][whichUpSkin]+=1;
+                moneys[1]-=upgradeCosts[whichUpSkin];
+                setBoxUp();
+            }
+            document.getElementById("p1money").innerHTML="Player 1: $"+moneys[0];
+            document.getElementById("p2money").innerHTML="Player 2: $"+moneys[1];
+        }
+        var z=false;
+        function toggleBuy(){
+           if (!z){
+            buyingScreen.style.display="flex";
+            setBoxUp();
+            document.getElementById("purchase").innerHTML="Close Skin Buyer"
+            z=true;
+           } else {
+            buyingScreen.style.display="none";
+            document.getElementById("purchase").innerHTML="Buy/Upgrade Skins"
+            z=false;
+            setupSkinSelection()
+           }
+        }
+        function circleRectCollision(cx, cy, r, rx, ry, rw, rh) {
+            let closestX = Math.max(rx, Math.min(cx, rx + rw));
+            let closestY = Math.max(ry, Math.min(cy, ry + rh));
+            let distance = Math.hypot(cx - closestX, cy - closestY);
+            return distance < r;
+        }
+
+        function isInMud(player, map) {
+            if (player.skin && player.skin.immune) return false;
+            const radius = player.skin ? player.skin.size / 2 : BASE_PLAYER_RADIUS;
+            for (let mud of map.mudPatches) {
+                const dist = Math.hypot(player.x - mud.x, player.y - mud.y);
+                if (dist < radius + mud.r) return true;
+            }
+            return false;
+        }
+
+        function getCurrentSpeed(player) {
+            if (!player.skin) return BASE_SPEED;
+            let speed;
+            var thisisascam;
+            if (player===player1){
+                thisisascam=0;
+            }
+            if (player===player2){
+                thisisascam=1;
+            }
+            if (player.skin.name==="Speedy"){
+                speed = player.skin.speed*Math.pow(1.05,levels[thisisascam][0]);
+            } else if (player.skin.name==="Sprinter"){
+                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][5]);
+            } else if (player.skin.name==="Tough"){
+                speed = player.skin.speed*Math.pow(1.04,levels[thisisascam][1]);
+            }  else if (player.skin.name==="Tiny"){
+                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][2]);
+            } else {
+                speed = player.skin.speed;
+            }
+            if (player.skin.immune) return speed;
+            if (player.sprintTimer > 0 && player.skin.name === 'Sprinter') {
+                speed *= player.skin.sprintMultiplier*Math.pow(1.10,levels[0][5]);
+            }
+            if (player.boostTimer > 0) {
+                speed *= player.boostMultiplier;
+            }
+            if (player.mudTimer > 0) {
+                speed *= MUD_MULTIPLIER;
+            }
+            return speed;
+        }
+
+        function performZoom(player) {
+            if (player.dx === 0 && player.dy === 0) return;
+            const magnitude = Math.hypot(player.dx, player.dy);
+            const angle = Math.atan2(player.dy, player.dx);
+            let targetX = player.x + Math.cos(angle) * player.skin.zoomDistance;
+            let targetY = player.y + Math.sin(angle) * player.skin.zoomDistance;
+            targetX = Math.max(player.skin.size / 2, Math.min(MAP_WIDTH - player.skin.size / 2, targetX));
+            targetY = Math.max(player.skin.size / 2, Math.min(MAP_HEIGHT - player.skin.size / 2, targetY));
+
+            let valid = true;
+            let closestX = player.x, closestY = player.y;
+            const steps = 10;
+            player.teleportTrail = [];
+            for (let i = 1; i <= steps; i++) {
+                const testX = player.x + (targetX - player.x) * (i / steps);
+                const testY = player.y + (targetY - player.y) * (i / steps);
+                let collides = false;
+                for (let obs of currentMap.obstacles) {
+                    if (circleRectCollision(testX, testY, player.skin.size / 2, obs.x, obs.y, obs.w, obs.h)) {
+                        collides = true;
+                        break;
+                    }
+                }
+                if (collides) {
+                    valid = false;
+                    break;
+                } else {
+                    closestX = testX;
+                    closestY = testY;
+                    player.teleportTrail.push({x: testX, y: testY});
+                }
+            }
+            if (valid) {
+                player.x = targetX;
+                player.y = targetY;
+                player.teleportTrail.push({x: targetX, y: targetY});
+            } else {
+                player.x = closestX;
+                player.y = closestY;
+                player.teleportTrail.push({x: closestX, y: closestY});
+            }
+            setTimeout(() => { player.teleportTrail = []; }, 1000);
+        }
+
+        function movePlayer(player) {
+            if (player.stunned) return;
+            let newX = player.x + player.dx;
+            let newY = player.y + player.dy;
+            let www=1;
+            if (player===player1&&player.skin&&player.skin.name==="Tiny"){
+                www=Math.pow(0.9,levels[0][2]);
+            }
+            if (player===player2&&player.skin&&player.skin.name==="Tiny"){
+                www=Math.pow(0.9,levels[1][2]);
+            }
+            const radius = player.skin ? player.skin.size*www / 2 : BASE_PLAYER_RADIUS;
+            newX = Math.max(radius, Math.min(MAP_WIDTH - radius, newX));
+            newY = Math.max(radius, Math.min(MAP_HEIGHT - radius, newY));
+
+            if (player.skin && player.skin.name === 'Ghost' && player.ghostTimer > 0) {
+                player.x = newX;
+                player.y = newY;
+                return;
+            }
+
+            let collides = false;
+            for (let obs of currentMap.obstacles) {
+                if (circleRectCollision(newX, newY, radius, obs.x, obs.y, obs.w, obs.h)) {
+                    collides = true;
+                    break;
+                }
+            }
+            let onObstacle=false;
+            for (let obs of currentMap.obstacles) {
+                if (circleRectCollision(player.x, player.y, radius, obs.x, obs.y, obs.w, obs.h)) {
+                    onObstacle = true;
+                    break;
+                }
+            }
+            if (!collides||(player.skin&&player.skin.name==='Ghost'&&player.ghostTimer>0)) {
+                player.x = newX;
+                player.y = newY;
+            } else if (player.skin && player.skin.name === 'Ghost' && player.ghostTimer <= 0 && onObstacle) {
+                let attempts = 0;
+                while (collides && attempts < 1000) {
+                    newX = Math.random() * (MAP_WIDTH - 2 * radius) + radius;
+                    newY = Math.random() * (MAP_HEIGHT - 2 * radius) + radius;
+                    collides = false;
+                    for (let obs of currentMap.obstacles) {
+                        if (circleRectCollision(newX, newY, radius, obs.x, obs.y, obs.w, obs.h)) {
+                            collides = true;
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+                if (!collides) {
+                    player.x = newX;
+                    player.y = newY;
+                }
+            }
+        }
+
+        function checkCollision(p1, p2) {
+            let wwwww=1;
+            if (p1.skin&&p1.skin.name==="Tiny"){
+                wwwww=Math.pow(0.9,levels[0][2]);
+            }
+            let scam=1;
+            if (p2.skin&&p2.skin.name==="Tiny"){
+                scam=Math.pow(0.9,levels[1][2]);
+            }
+            const p1Radius = p1.skin ? p1.skin.size*wwwww / 2 : BASE_PLAYER_RADIUS;
+            const p2Radius = p2.skin ? p2.skin.size*scam / 2 : BASE_PLAYER_RADIUS;
+            const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+            if (dist < p1Radius + p2Radius) {
+                if (p1.skin && p1.skin.name === 'Bouncer' && p1.bounceTimer > 0 && !p2.stunned && p1.hasCrown) {
+                    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+                    let newX = p1.x + Math.cos(angle) * p1.skin.bounceForce;
+                    let newY = p1.y + Math.sin(angle) * p1.skin.bounceForce;
+                    newX = Math.max(p2Radius, Math.min(MAP_WIDTH - p2Radius, newX));
+                    newY = Math.max(p2Radius, Math.min(MAP_HEIGHT - p2Radius, newY));
+                    let collides = false;
+                    for (let obs of currentMap.obstacles) {
+                        if (circleRectCollision(newX, newY, p2Radius, obs.x, obs.y, obs.w, obs.h)) {
+                            collides = true;
+                            break;
+                        }
+                    }
+                    if (!collides) {
+                        p2.x = newX;
+                        p2.y = newY;
+                    }
+                    return false;
+                }
+                if (p2.skin && p2.skin.name === 'Bouncer' && p2.bounceTimer > 0 && !p1.stunned && p2.hasCrown) {
+                    const angle = Math.atan2(p1.y - p2.y, p1.x - p2.x);
+                    let newX = p2.x + Math.cos(angle) * p2.skin.bounceForce;
+                    let newY = p2.y + Math.sin(angle) * p2.skin.bounceForce;
+                    newX = Math.max(p1Radius, Math.min(MAP_WIDTH - p1Radius, newX));
+                    newY = Math.max(p1Radius, Math.min(MAP_HEIGHT - p1Radius, newY));
+                    let collides = false;
+                    for (let obs of currentMap.obstacles) {
+                        if (circleRectCollision(newX, newY, p1Radius, obs.x, obs.y, obs.w, obs.h)) {
+                            collides = true;
+                            break;
+                        }
+                    }
+                    if (!collides) {
+                        p1.x = newX;
+                        p1.y = newY;
+                    }
+                    return false;
+                }
+                if (p1.stunned || p2.stunned || 
+                    (p1.skin && p1.skin.name === 'Shield' && p1.shieldTimer > 0 && p1.hasCrown) || 
+                    (p2.skin && p2.skin.name === 'Shield' && p2.shieldTimer > 0 && p2.hasCrown)) {
+                    return false;
+                }
+                if (((p1.skin&&p1.skin.name==='Heavy'&&p1.hasCrown&&Math.random()<0.4+0.4*levels[0][4])||(p2.skin&&p2.skin.name==='Heavy'&&p2.hasCrown&&Math.random()<0.4+0.4*levels[1][4]))){
+                    return "back";
+                }
+                return true;
+            }
+            return false;
+        }
+
+        function checkBoostPickup(player) {
+            let wwwwww=1;
+            if (player===player1&&player.skin&&player.skin.name==="Tiny"){
+                wwwwww=Math.pow(0.9,levels[0][2]);
+            }
+            if (player===player2&&player.skin&&player.skin.name==="Tiny"){
+                wwwwww=Math.pow(0.9,levels[1][2]);
+            }
+            if (player.skin && player.skin.immune) return;
+            const radius = player.skin ? player.skin.size*wwwwww / 2 : BASE_PLAYER_RADIUS;
+            for (let i = speedBoosts.length - 1; i >= 0; i--) {
+                const boost = speedBoosts[i];
+                if (Math.hypot(player.x - boost.x, player.y - boost.y) < radius + BOOST_SIZE / 2) {
+                    player.boostTimer = BOOST_DURATION;
+                    player.boostMultiplier = BOOST_MULTIPLIER;
+                    speedBoosts.splice(i, 1);
+                }
+            }
+        }
+        function spawnSpeedBoost(map) {
+            let x, y, valid;
+            do {
+                x = Math.random() * (MAP_WIDTH - BOOST_SIZE) + BOOST_SIZE / 2;
+                y = Math.random() * (MAP_HEIGHT - BOOST_SIZE) + BOOST_SIZE / 2;
+                valid = true;
+                for (let obs of map.obstacles) {
+                    if (circleRectCollision(x, y, BOOST_SIZE / 2, obs.x, obs.y, obs.w, obs.h)) {
+                        valid = false;
+                        break;
+                    }
+                }
+                for (let mud of map.mudPatches) {
+                    if (Math.hypot(x - mud.x, y - mud.y) < BOOST_SIZE / 2 + mud.r) {
+                        valid = false;
+                        break;
+                    }
+                }
+                let wwwwwww=1;
+            if (player1.skin&&player1.skin.name==="Tiny"){
+                wwwwwww=Math.pow(0.9,levels[0][2]);
+            }
+            let wwwwwwww=1;
+            if (player2.skin&&player2.skin.name==="Tiny"){
+                wwwwwwww=Math.pow(0.9,levels[1][2]);
+            }
+                const p1Radius = player1.skin ? player1.skin.size*wwwwwww / 2 : BASE_PLAYER_RADIUS;
+                const p2Radius = player2.skin ? player2.skin.size*wwwwwwww / 2 : BASE_PLAYER_RADIUS;
+                if (Math.hypot(x - player1.x, y - player1.y) < BOOST_SIZE / 2 + p1Radius ||
+                    Math.hypot(x - player2.x, y - player2.y) < BOOST_SIZE / 2 + p2Radius) {
+                    valid = false;
+                }
+            } while (!valid);
+            speedBoosts.push({x, y});
+        }
+
+        function updatePlayerMovement(player, up, down, left, right, action) {
+            let idk;
+            if (player===player1){
+                idk=0;
+            } else {
+                idk=1;
+            }
+            player.dx = 0;
+            player.dy = 0;
+            let speed = getCurrentSpeed(player);
+            const abilityKey = player===player1 ? ' ' : 'enter';
+            if (player.skin && player.skin.name === 'Sprinter' && keys[abilityKey] && player.sprintCooldown <= 0 && !player.stunned) {
+                player.sprintTimer = player.skin.sprintDuration*Math.pow(1.05,levels[idk][5]);
+                player.sprintCooldown = player.skin.sprintCooldown;
+            }
+            if (player.skin && player.skin.name === 'Ghost' && keys[abilityKey] && player.ghostCooldown <= 0 && !player.stunned) {
+                player.ghostTimer = player.skin.ghostDuration*Math.pow(1.05,levels[idk][6]);
+                player.ghostCooldown = player.skin.ghostCooldown;
+            }
+            if (player.skin && player.skin.name === 'Bouncer' && keys[abilityKey] && player.bounceCooldown <= 0 && !player.stunned) {
+                player.bounceTimer = player.skin.bounceDuration*Math.pow(1.05,levels[idk][7]);
+                player.bounceCooldown=player.skin.bounceCooldown
+            }
+            if (player.skin && player.skin.name === 'Shield' && keys[abilityKey] && player.shieldCooldown <= 0 && !player.stunned) {
+                player.shieldTimer = player.skin.shieldDuration*Math.pow(1.07,levels[idk][9]);
+                player.shieldCooldown = player.skin.shieldCooldown;
+            }
+            if (keys[up]) player.dy -= speed;
+            if (keys[down]) player.dy += speed;
+            if (keys[left]) player.dx -= speed;
+            if (keys[right]) player.dx += speed;
+            if (player.skin && player.skin.name === 'Zoomer' && keys[abilityKey] && player.zoomCooldown <= 0 && !player.stunned) {
+                performZoom(player);
+                player.zoomCooldown = player.skin.zoomCooldown/Math.pow(1.05,levels[idk][3]);
+            }
+        }
+
+        function resetGame() {
+            player1.hasCrown = false;
+            player1.holdTime = 0;
+            player1.stunned = false;
+            player1.stunTimer = 0;
+            player1.boostTimer = 0;
+            player1.boostMultiplier = 1;
+            player1.mudTimer = 0;
+            player1.inMud = false;
+            player1.zoomCooldown = 0;
+            player1.sprintTimer = 0;
+            player1.sprintCooldown = 0;
+            player1.ghostTimer = 0;
+            player1.ghostCooldown = 0;
+            player1.bounceTimer = 0;
+            player1.shieldTimer = 0;
+            player1.teleportTrail = [];
+            player2.hasCrown = false;
+            player2.holdTime = 0;
+            player2.stunned = false;
+            player2.stunTimer = 0;
+            player2.boostTimer = 0;
+            player2.boostMultiplier = 1;
+            player2.mudTimer = 0;
+            player2.inMud = false;
+            player2.zoomCooldown = 0;
+            player2.sprintTimer = 0;
+            player2.sprintCooldown = 0;
+            player2.ghostTimer = 0;
+            player2.ghostCooldown = 0;
+            player2.bounceTimer = 0;
+            player2.shieldTimer = 0;
+            player2.teleportTrail = [];
+            crown.picked = false;
+            countdown = 3;
+            countdownTimer = countdownInterval;
+            winMessage.style.display = 'none';
+            restartButton.style.display = 'none';
+            startScreen.style.display = 'block';
+            gameState = 'start';
+            info.innerHTML = '';
+            speedBoosts = [];
+            boostSpawnTimer = 0;
+            currentPlayer=1;
+        setupSkinSelection();
+        }
+
+        function drawPlayer(player) {
+            if (player.hasCrown) {
+                let sirscam=1;
+            if (player===player1&&player.skin&&player.skin.name==="Tiny"){
+                sirscam=Math.pow(0.9,levels[0][2]);
+            }
+            if (player===player2&&player.skin&&player.skin.name==="Tiny"){
+                sirscam=Math.pow(0.9,levels[1][2]);
+            }
+                drawCrown(player.x, player.y - (player.skin ? player.skin.size*sirscam / 2 : BASE_PLAYER_RADIUS) - CROWN_SIZE / 2);
+            }
+            if (player.skin) {
+                player.skin.draw(ctx, player);
+            } else {
+                ctx.fillStyle = player.stunned ? '#696969' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : player.color;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, BASE_PLAYER_RADIUS, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawViewport(player, viewportX) {
+            let camX = player.x - VIEW_WIDTH / 2;
+            let camY = player.y - VIEW_HEIGHT / 2;
+
+            camX = Math.max(0, Math.min(MAP_WIDTH - VIEW_WIDTH, camX));
+            camY = Math.max(0, Math.min(MAP_HEIGHT - VIEW_HEIGHT, camY));
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(viewportX, 0, VIEW_WIDTH, VIEW_HEIGHT);
+            ctx.clip();
+
+            ctx.translate(viewportX - camX, -camY);
+
+            drawBackground();
+
+            for (let mud of currentMap.mudPatches) {
+                mud.draw(ctx);
+            }
+
+            for (let obs of currentMap.obstacles) {
+                obs.draw(ctx);
+            }
+
+            if (!crown.picked) {
+                drawCrown(crown.x, crown.y);
+            }
+
+            for (let boost of speedBoosts) {
+                drawSpeedBoost(boost.x, boost.y);
+            }
+
+            drawPlayer(player1);
+            drawPlayer(player2);
+
+            ctx.restore();
+
+            // Draw minimap below both viewports
+            const miniScale = MINI_WIDTH / MAP_WIDTH;
+            ctx.save();
+            ctx.translate(350 - MINI_WIDTH / 2, VIEW_HEIGHT);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2 / miniScale;
+            ctx.strokeRect(-1 / miniScale, -1 / miniScale, MAP_WIDTH + 2 / miniScale, MAP_HEIGHT + 2 / miniScale);
+            ctx.scale(miniScale, miniScale);
+
+            ctx.fillStyle = currentMap.backgroundColor;
+            ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+
+            for (let mud of currentMap.mudPatches) {
+                mud.draw(ctx);
+            }
+
+            for (let obs of currentMap.obstacles) {
+                obs.draw(ctx);
+            }
+
+            if (!crown.picked) {
+                drawCrown(crown.x, crown.y);
+            }
+
+            for (let boost of speedBoosts) {
+                drawSpeedBoost(boost.x, boost.y);
+            }
+
+            ctx.fillStyle = player1.color;
+            ctx.beginPath();
+            let scam1=1;
+            if (player1.skin&&player1.skin.name==="Tiny"){
+                scam1=Math.pow(0.9,levels[0][2]);
+            }
+            let scam2=1;
+            if (player2.skin&&player2.skin.name==="Tiny"){
+                scam1=Math.pow(0.9,levels[1][2]);
+            }
+            ctx.arc(player1.x, player1.y, (player1.skin ? player1.skin.size / 2 : BASE_PLAYER_RADIUS), 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = player2.color;
+            ctx.beginPath();
+            ctx.arc(player2.x, player2.y, (player2.skin ? player2.skin.size / 2 : BASE_PLAYER_RADIUS), 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function updateGame(dt) {
+            if (gameState === 'countdown') {
+                countdownTimer -= dt * 1000;
+                if (countdownTimer <= 0) {
+                    countdown--;
+                    countdownEl.textContent = countdown;
+                    countdownTimer = countdownInterval;
+                    if (countdown <= 0) {
+                        gameState = 'playing';
+                        countdownEl.style.display = 'none';
+                    }
+                }
+                return;
+            }
+
+            if (gameState !== 'playing') return;
+
+            if (!player1.stunned) {
+                updatePlayerMovement(player1, 'w', 's', 'a', 'd', ' ');
+            }
+            if (!player2.stunned) {
+                updatePlayerMovement(player2, 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter');
+            }
+
+            if (player1.stunTimer > 0) {
+                player1.stunTimer -= dt * 1000;
+                if (player1.stunTimer <= 0) {
+                    player1.stunned = false;
+                }
+            }
+            if (player2.stunTimer > 0) {
+                player2.stunTimer -= dt * 1000;
+                if (player2.stunTimer <= 0) {
+                    player2.stunned = false;
+                }
+            }
+            if (player1.boostTimer > 0) {
+                player1.boostTimer -= dt * 1000;
+                if (player1.boostTimer <= 0) {
+                    player1.boostMultiplier = 1;
+                }
+            }
+            if (player2.boostTimer > 0) {
+                player2.boostTimer -= dt * 1000;
+                if (player2.boostTimer <= 0) {
+                    player2.boostMultiplier = 1;
+                }
+            }
+            if (player1.mudTimer > 0) {
+                player1.mudTimer -= dt * 1000;
+            }
+            if (player2.mudTimer > 0) {
+                player2.mudTimer -= dt * 1000;
+            }
+            if (player1.skin && player1.skin.name === 'Zoomer' && player1.zoomCooldown > 0) {
+                player1.zoomCooldown -= dt * 1000;
+            }
+            if (player2.skin && player2.skin.name === 'Zoomer' && player2.zoomCooldown > 0) {
+                player2.zoomCooldown -= dt * 1000;
+            }
+            if (player1.skin && player1.skin.name === 'Sprinter') {
+                player1.sprintTimer -= dt * 1000;
+                player1.sprintCooldown -= dt * 1000;
+            }
+            if (player2.skin && player2.skin.name === 'Sprinter') {
+                player2.sprintTimer -= dt * 1000;
+                player2.sprintCooldown -= dt * 1000;
+            }
+            if (player1.skin && player1.skin.name === 'Ghost') {
+                player1.ghostTimer -= dt * 1000;
+                player1.ghostCooldown -= dt * 1000;
+            }
+            if (player2.skin && player2.skin.name === 'Ghost') {
+                player2.ghostTimer -= dt * 1000;
+                player2.ghostCooldown -= dt * 1000;
+            }
+            if (player1.skin && player1.skin.name === 'Bouncer') {
+                player1.bounceTimer -= dt * 1000;
+                player1.bounceCooldown -= dt*1000;
+            }
+            if (player2.skin && player2.skin.name === 'Bouncer') {
+                player2.bounceTimer -= dt * 1000;
+                player2.bounceCooldown -= dt*1000;
+            }
+            
+            if (player1.skin && player1.skin.name === 'Shield') {
+                player1.shieldTimer -= dt * 1000;
+                player1.shieldCooldown -= dt * 1000;
+            }
+            if (player2.skin && player2.skin.name === 'Shield') {
+                player2.shieldTimer -= dt * 1000;
+                player2.shieldCooldown -= dt * 1000;
+            }
+
+            movePlayer(player1);
+            movePlayer(player2);
+
+            player1.inMud = isInMud(player1, currentMap);
+            if (player1.inMud && player1.mudTimer <= 0) {
+                player1.mudTimer = MUD_DEBUFF_DURATION;
+            }
+            player2.inMud = isInMud(player2, currentMap);
+            if (player2.inMud && player2.mudTimer <= 0) {
+                player2.mudTimer = MUD_DEBUFF_DURATION;
+            }
+
+            checkBoostPickup(player1);
+            checkBoostPickup(player2);
+
+            if (!crown.picked) {
+                let sirscamsalot=1;
+            if (player1.skin&&player1.skin.name==="Tiny"){
+                sirscamsalot=Math.pow(0.9,levels[0][2]);
+            }
+            let scammore=1;
+            if (player2.skin&&player2.skin.name==="Tiny"){
+                scammore=Math.pow(0.9,levels[1][2]);
+            }
+                const p1Radius = player1.skin ? player1.skin.size*sirscamsalot / 2 : BASE_PLAYER_RADIUS;
+                const p2Radius = player2.skin ? player2.skin.size*scammore / 2 : BASE_PLAYER_RADIUS;
+                if (Math.hypot(player1.x - crown.x, player1.y - crown.y) < p1Radius + CROWN_SIZE / 2) {
+                    player1.hasCrown = true;
+                    crown.picked = true;
+                } else if (Math.hypot(player2.x - crown.x, player2.y - crown.y) < p2Radius + CROWN_SIZE / 2) {
+                    player2.hasCrown = true;
+                    crown.picked = true;
+                }
+            }
+
+            if (checkCollision(player1, player2)===true) {
+                if (player1.hasCrown) {
+                    player1.hasCrown = false;
+                    player2.hasCrown = true;
+                    player1.stunned = true;
+                    player1.stunTimer = (player2.skin&&player2.skin.name==='Warrior') ? STUN_DURATION*player2.skin.stunMultiplier*Math.pow(1.1,levels[1][8]) : STUN_DURATION;
+                    player1.dx = 0;
+                    player1.dy = 0;
+                } else if (player2.hasCrown) {
+                    player2.hasCrown = false;
+                    player1.hasCrown = true;
+                    player2.stunned = true;
+                    player2.stunTimer = (player1.skin&&player1.skin.name==='Warrior') ? STUN_DURATION*player1.skin.stunMultiplier*Math.pow(1.1,levels[0][8]) : STUN_DURATION;
+                    player2.dx = 0;
+                    player2.dy = 0;
+                }
+            } else if (checkCollision(player1, player2)==="back"){
+                if (player1.hasCrown) {
+                    player2.stunned = true;
+                    player2.stunTimer = (player2.skin&&player2.skin.name==='Warrior') ? STUN_DURATION*player2.skin.stunMultiplier*Math.pow(1.1,levels[1][8]) : STUN_DURATION;
+                    player2.dx = 0;
+                    player2.dy = 0;
+                } else if (player2.hasCrown) {
+                    player1.stunned = true;
+                    player1.stunTimer = (player1.skin&&player1.skin.name==='Warrior') ? STUN_DURATION*player1.skin.stunMultiplier*Math.pow(1.1,levels[0][8]) : STUN_DURATION;
+                    player1.dx = 0;
+                    player1.dy = 0;
+                }
+            }
+
+            if (player1.hasCrown) {
+                player1.holdTime += dt * 1000;
+            }
+            if (player2.hasCrown) {
+                player2.holdTime += dt * 1000;
+            }
+
+            if (player1.holdTime >= WIN_TIME) {
+                gameState = 'ended';
+                winMessage.textContent = 'P1 Wins!';
+                winMessage.style.display = 'block';
+                restartButton.style.display = 'block';
+                moneys[0]+=90;
+                moneys[1]+=Math.floor(player2.holdTime/1000);
+                document.getElementById("p1money").innerHTML="Player 1: $"+moneys[0];
+            document.getElementById("p2money").innerHTML="Player 2: $"+moneys[1];
+            } else if (player2.holdTime >= WIN_TIME) {
+                gameState = 'ended';
+                winMessage.textContent = 'P2 Wins!';
+                winMessage.style.display = 'block';
+                restartButton.style.display = 'block';
+                moneys[1]+=90;
+                moneys[0]+=Math.floor(player1.holdTime/1000);
+                document.getElementById("p1money").innerHTML="Player 1: $"+moneys[0];
+            document.getElementById("p2money").innerHTML="Player 2: $"+moneys[1];
+            }
+
+            boostSpawnTimer -= dt * 1000;
+            if (boostSpawnTimer <= 0) {
+                spawnSpeedBoost(currentMap);
+                boostSpawnTimer = BOOST_SPAWN_INTERVAL;
+            }
+
+            info.innerHTML = `
+                P1: ${Math.floor(player1.holdTime / 1000)}s (${player1.skin ? player1.skin.name : 'No Skin'})<br>
+                P2: ${Math.floor(player2.holdTime / 1000)}s (${player2.skin ? player2.skin.name : 'No Skin'})<br>
+                Map: ${currentMap ? currentMap.name : 'Not Selected'}
+            `;
+        }
+
+        let currentPlayer = 1;
+        let x=0;
+        function setupSkinSelection() {
+            skinSelection.innerHTML = `P${currentPlayer} select skin:`;
+            x=0;
+            for (let skinName in skins) {
+                    if (unlocks[currentPlayer-1][x]===true){
+                    const button = document.createElement('button');
+                    button.className = 'skin-button';
+                    button.textContent = skins[skinName].name;
+                    button.onclick = () => {
+                        if (currentPlayer === 1) {
+                            player1.skin = skins[skinName];
+                            currentPlayer = 2;
+                            setupSkinSelection();
+                        } else {
+                            player2.skin = skins[skinName];
+                            startGame();
+                        }
+                    }
+                    skinSelection.appendChild(button);
+            }
+            x+=1;
+            }
+        }
+
+        function startGame() {
+            currentMap = maps[Math.floor(Math.random() * maps.length)];
+            currentMap.obstacles = currentMap.obstacles.map(obs => new Obstacle(obs.x, obs.y, obs.w, obs.h,obs.c));
+            currentMap.mudPatches = currentMap.mudPatches.map(mud => new MudPatch(mud.x, mud.y, mud.r));
+            player1.x = 100;
+            player1.y = MAP_HEIGHT / 2;
+            player2.x = MAP_WIDTH - 100;
+            player2.y = MAP_HEIGHT / 2;
+            crown.x = MAP_WIDTH / 2;
+            crown.y = MAP_HEIGHT / 2;
+            gameState = 'countdown';
+            startScreen.style.display = 'none';
+            countdownEl.style.display = 'block';
+            countdownEl.textContent = countdown;
+            countdownTimer = countdownInterval;
+        }
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        restartButton.addEventListener('click', resetGame);
+
+        let lastTime = 0;
+        function gameLoop(time) {
+            const dt = (time - lastTime) / 1000;
+            lastTime = time;
+
+            updateGame(dt);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            
+            if (gameState === 'playing' || gameState === 'countdown') {
+                drawViewport(player1, 0);
+                drawViewport(player2, VIEW_WIDTH);
+            }
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width/2-2, canvas.height-80);
+            ctx.lineTo(canvas.width/2+2, canvas.height-80);
+            ctx.lineTo(canvas.width/2+2, 0);
+            ctx.lineTo(canvas.width/2-2, 0);
+            ctx.closePath();
+            ctx.fill();
+            requestAnimationFrame(gameLoop);
+        }
+        setupSkinSelection();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
+
+
+        
