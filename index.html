@@ -657,14 +657,14 @@
             document.getElementById("p2money").innerHTML="Player 2: $"+moneys[1];
         }
         function upgradeSkin(whichUpSkin,whichUpPlayer){
-            if (whichUpPlayer===0&&moneys[0]>=upgradeCosts[whichUpSkin]){
+            if (whichUpPlayer===0&&moneys[0]>=upgradeCosts[levels[0][whichUpSkin]]){
                 levels[0][whichUpSkin]+=true;
-                moneys[0]-=upgradeCosts[whichUpSkin];
+                moneys[0]-=upgradeCosts[levels[0][whichUpSkin]];
                 setBoxUp();
             }
-            if (whichUpPlayer===1&&moneys[1]>=upgradeCosts[whichUpSkin]){
+            if (whichUpPlayer===1&&moneys[1]>=upgradeCosts[levels[1][whichUpSkin]]){
                 levels[1][whichUpSkin]+=1;
-                moneys[1]-=upgradeCosts[whichUpSkin];
+                moneys[1]-=upgradeCosts[levels[1][whichUpSkin]];
                 setBoxUp();
             }
             document.getElementById("p1money").innerHTML="Player 1: $"+moneys[0];
@@ -1436,3 +1436,4 @@
 
 
         
+
