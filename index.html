@@ -259,7 +259,7 @@
         const skins = {
             speedy: {
                 name: 'Speedy',
-                speed: BASE_SPEED * 1.25,
+                speed: BASE_SPEED * 1.1,
                 size: BASE_PLAYER_SIZE,
                 color: '#ff0000',
                 draw: function(ctx, player) {
@@ -293,7 +293,7 @@
             },
             tiny: {
                 name: 'Tiny',
-                speed: BASE_SPEED*1.15,
+                speed: BASE_SPEED*1.05,
                 size: BASE_PLAYER_SIZE * 0.5,
                 color: '#00ff00',
                 draw: function(ctx, player) {
@@ -347,7 +347,7 @@
             },
             heavy: {
                 name: 'Heavy',
-                speed: BASE_SPEED * 0.9,
+                speed: BASE_SPEED,
                 size: BASE_PLAYER_SIZE * 1.5,
                 color: '#4b0082',
                 draw: function(ctx, player) {
@@ -361,7 +361,7 @@
             },
             sprinter: {
                 name: 'Sprinter',
-                speed: BASE_SPEED * 1.15,
+                speed: BASE_SPEED * 1.05,
                 size: BASE_PLAYER_SIZE * 0.8,
                 color: '#ffa500',
                 sprintTimer: 0,
@@ -454,7 +454,7 @@
             },
             shield: {
                 name: 'Shield',
-                speed: BASE_SPEED * 0.9,
+                speed: BASE_SPEED,
                 size: BASE_PLAYER_SIZE * 1.1,
                 color: '#c0c0c0',
                 shieldTimer: 0,
@@ -658,13 +658,13 @@
         }
         function upgradeSkin(whichUpSkin,whichUpPlayer){
             if (whichUpPlayer===0&&moneys[0]>=upgradeCosts[levels[0][whichUpSkin]]){
-                levels[0][whichUpSkin]+=true;
-                moneys[0]-=upgradeCosts[levels[0][whichUpSkin]];
+                levels[0][whichUpSkin]+=1;
+                moneys[0]-=upgradeCosts[levels[0][whichUpSkin-1]];
                 setBoxUp();
             }
             if (whichUpPlayer===1&&moneys[1]>=upgradeCosts[levels[1][whichUpSkin]]){
                 levels[1][whichUpSkin]+=1;
-                moneys[1]-=upgradeCosts[levels[1][whichUpSkin]];
+                moneys[1]-=upgradeCosts[levels[1][whichUpSkin-1]];
                 setBoxUp();
             }
             document.getElementById("p1money").innerHTML="Player 1: $"+moneys[0];
@@ -1436,4 +1436,5 @@
 
 
         
+
 
