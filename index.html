@@ -367,7 +367,7 @@
                 sprintTimer: 0,
                 sprintDuration: 3000,
                 sprintCooldown: 10000,
-                sprintMultiplier: 1.5,
+                sprintMultiplier: 2,
                 draw: function(ctx, player) {
                     ctx.fillStyle = player.stunned ? '#696969' : player.sprintTimer > 0 ? '#ff4500' : player.boostTimer > 0 ? '#00ff00' : player.mudTimer > 0 ? '#8b4513' : this.color;
                     ctx.beginPath();
@@ -712,7 +712,7 @@
                 thisisascam=1;
             }
             if (player.skin.name==="Speedy"){
-                speed = player.skin.speed*Math.pow(1.05,levels[thisisascam][0]);
+                speed = player.skin.speed*Math.pow(1.04,levels[thisisascam][0]);
             } else if (player.skin.name==="Sprinter"){
                 speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][5]);
             } else if (player.skin.name==="Tough"){
@@ -973,15 +973,15 @@
                 player.sprintCooldown = player.skin.sprintCooldown;
             }
             if (player.skin && player.skin.name === 'Ghost' && keys[abilityKey] && player.ghostCooldown <= 0 && !player.stunned) {
-                player.ghostTimer = player.skin.ghostDuration*Math.pow(1.05,levels[idk][6]);
+                player.ghostTimer = player.skin.ghostDuration*Math.pow(1.1,levels[idk][6]);
                 player.ghostCooldown = player.skin.ghostCooldown;
             }
             if (player.skin && player.skin.name === 'Bouncer' && keys[abilityKey] && player.bounceCooldown <= 0 && !player.stunned) {
-                player.bounceTimer = player.skin.bounceDuration*Math.pow(1.05,levels[idk][7]);
+                player.bounceTimer = player.skin.bounceDuration*Math.pow(1.1,levels[idk][7]);
                 player.bounceCooldown=player.skin.bounceCooldown
             }
             if (player.skin && player.skin.name === 'Shield' && keys[abilityKey] && player.shieldCooldown <= 0 && !player.stunned) {
-                player.shieldTimer = player.skin.shieldDuration*Math.pow(1.07,levels[idk][9]);
+                player.shieldTimer = player.skin.shieldDuration*Math.pow(1.1,levels[idk][9]);
                 player.shieldCooldown = player.skin.shieldCooldown;
             }
             if (keys[up]) player.dy -= speed;
@@ -990,7 +990,7 @@
             if (keys[right]) player.dx += speed;
             if (player.skin && player.skin.name === 'Zoomer' && keys[abilityKey] && player.zoomCooldown <= 0 && !player.stunned) {
                 performZoom(player);
-                player.zoomCooldown = player.skin.zoomCooldown/Math.pow(1.05,levels[idk][3]);
+                player.zoomCooldown = player.skin.zoomCooldown/Math.pow(1.2,levels[idk][3]);
             }
         }
 
@@ -1286,26 +1286,26 @@
                     player1.hasCrown = false;
                     player2.hasCrown = true;
                     player1.stunned = true;
-                    player1.stunTimer = (player2.skin&&player2.skin.name==='Warrior') ? STUN_DURATION*player2.skin.stunMultiplier*Math.pow(1.1,levels[1][8]) : STUN_DURATION;
+                    player1.stunTimer = (player2.skin&&player2.skin.name==='Warrior') ? STUN_DURATION*player2.skin.stunMultiplier*Math.pow(1.2,levels[1][8]) : STUN_DURATION;
                     player1.dx = 0;
                     player1.dy = 0;
                 } else if (player2.hasCrown) {
                     player2.hasCrown = false;
                     player1.hasCrown = true;
                     player2.stunned = true;
-                    player2.stunTimer = (player1.skin&&player1.skin.name==='Warrior') ? STUN_DURATION*player1.skin.stunMultiplier*Math.pow(1.1,levels[0][8]) : STUN_DURATION;
+                    player2.stunTimer = (player1.skin&&player1.skin.name==='Warrior') ? STUN_DURATION*player1.skin.stunMultiplier*Math.pow(1.2,levels[0][8]) : STUN_DURATION;
                     player2.dx = 0;
                     player2.dy = 0;
                 }
             } else if (checkCollision(player1, player2)==="back"){
                 if (player1.hasCrown) {
                     player2.stunned = true;
-                    player2.stunTimer = (player2.skin&&player2.skin.name==='Warrior') ? STUN_DURATION*player2.skin.stunMultiplier*Math.pow(1.1,levels[1][8]) : STUN_DURATION;
+                    player2.stunTimer = (player2.skin&&player2.skin.name==='Warrior') ? STUN_DURATION*player2.skin.stunMultiplier*Math.pow(1.2,levels[1][8]) : STUN_DURATION;
                     player2.dx = 0;
                     player2.dy = 0;
                 } else if (player2.hasCrown) {
                     player1.stunned = true;
-                    player1.stunTimer = (player1.skin&&player1.skin.name==='Warrior') ? STUN_DURATION*player1.skin.stunMultiplier*Math.pow(1.1,levels[0][8]) : STUN_DURATION;
+                    player1.stunTimer = (player1.skin&&player1.skin.name==='Warrior') ? STUN_DURATION*player1.skin.stunMultiplier*Math.pow(1.2,levels[0][8]) : STUN_DURATION;
                     player1.dx = 0;
                     player1.dy = 0;
                 }
@@ -1323,8 +1323,8 @@
                 winMessage.textContent = 'P1 Wins!';
                 winMessage.style.display = 'block';
                 restartButton.style.display = 'block';
-                moneys[0]+=90;
-                moneys[1]+=Math.floor(player2.holdTime/1000);
+                moneys[0]+=120;
+                moneys[1]+=2*Math.floor(player2.holdTime/1000)+40;
                 document.getElementById("p1money").innerHTML="Player 1: $"+moneys[0];
             document.getElementById("p2money").innerHTML="Player 2: $"+moneys[1];
             } else if (player2.holdTime >= WIN_TIME) {
@@ -1347,7 +1347,7 @@
             info.innerHTML = `
                 P1: ${Math.floor(player1.holdTime / 1000)}s (${player1.skin ? player1.skin.name : 'No Skin'})<br>
                 P2: ${Math.floor(player2.holdTime / 1000)}s (${player2.skin ? player2.skin.name : 'No Skin'})<br>
-                Map: ${currentMap ? currentMap.name : 'Not Selected'}
+                Map: ${currentMap ? currentMap.name: 'Not Selected'}
             `;
         }
 
@@ -1436,5 +1436,6 @@
 
 
         
+
 
 
