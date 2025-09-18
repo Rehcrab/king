@@ -725,9 +725,15 @@
             }  else if (player.skin.name==="Tiny"){
                 speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][2]);
             } else if (player.skin.name==="Shield"){
-                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][2]);
+                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][9]);
             } else if (player.skin.name==="Heavy"){
-                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][2]);
+                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][4]);
+            } else if (player.skin.name==="Ghost"){
+                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][6]);
+            }else if (player.skin.name==="Bouncer"){
+                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][7]);
+            } else if (player.skin.name==="Warrior"){
+                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][8]);
             }else {
                 speed = player.skin.speed;
             }
@@ -1498,6 +1504,7 @@ function movePlayer(player) {
 
 
         
+
 
 
 
