@@ -787,65 +787,117 @@
             setTimeout(() => { player.teleportTrail = []; }, 1000);
         }
 
-        function movePlayer(player) {
-            if (player.stunned) return;
-            let newX = player.x + player.dx;
-            let newY = player.y + player.dy;
-            let www=1;
-            if (player===player1&&player.skin&&player.skin.name==="Tiny"){
-                www=Math.pow(0.9,levels[0][2]);
-            }
-            if (player===player2&&player.skin&&player.skin.name==="Tiny"){
-                www=Math.pow(0.9,levels[1][2]);
-            }
-            const radius = player.skin ? player.skin.size*www / 2 : BASE_PLAYER_RADIUS;
-            newX = Math.max(radius, Math.min(MAP_WIDTH - radius, newX));
-            newY = Math.max(radius, Math.min(MAP_HEIGHT - radius, newY));
+        const WALL_SLIDE_MULTIPLIER = 0.8; // Speed multiplier when wall sliding
+function movePlayer(player) {
+    if (player.stunned) return;
+    
+    let www = 1;
+    if (player === player1 && player.skin && player.skin.name === "Tiny") {
+        www = Math.pow(0.9, levels[0][2]);
+    }
+    if (player === player2 && player.skin && player.skin.name === "Tiny") {
+        www = Math.pow(0.9, levels[1][2]);
+    }
+    const radius = player.skin ? player.skin.size * www / 2 : BASE_PLAYER_RADIUS;
 
-            if (player.skin && player.skin.name === 'Ghost' && player.ghostTimer > 0) {
-                player.x = newX;
-                player.y = newY;
-                return;
-            }
+    if (player.skin && player.skin.name === 'Ghost' && player.ghostTimer > 0) {
+        player.x += player.dx;
+        player.y += player.dy;
+        player.x = Math.max(radius, Math.min(MAP_WIDTH - radius, player.x));
+        player.y = Math.max(radius, Math.min(MAP_HEIGHT - radius, player.y));
+        return;
+    }
 
-            let collides = false;
-            for (let obs of currentMap.obstacles) {
-                if (circleRectCollision(newX, newY, radius, obs.x, obs.y, obs.w, obs.h)) {
-                    collides = true;
-                    break;
-                }
+    // Test movement in X and Y directions separately for wall sliding
+    let newX = player.x + player.dx;
+    let newY = player.y;
+    
+    let collidesX = false;
+    for (let obs of currentMap.obstacles) {
+        if (circleRectCollision(newX, newY, radius, obs.x, obs.y, obs.w, obs.h)) {
+            collidesX = true;
+            break;
+        }
+    }
+    
+    let newX2 = player.x;
+    let newY2 = player.y + player.dy;
+    
+    let collidesY = false;
+    for (let obs of currentMap.obstacles) {
+        if (circleRectCollision(newX2, newY2, radius, obs.x, obs.y, obs.w, obs.h)) {
+            collidesY = true;
+            break;
+        }
+    }
+
+    // Wall sliding logic
+    if (collidesX && !collidesY) {
+        // Can move in Y direction but not X - slide along Y axis
+        player.y = newY2;
+        player.y = Math.max(radius, Math.min(MAP_HEIGHT - radius, player.y));
+    } else if (collidesY && !collidesX) {
+        // Can move in X direction but not Y - slide along X axis
+        player.x = newX;
+        player.x = Math.max(radius, Math.min(MAP_WIDTH - radius, player.x));
+    } else if (collidesX && collidesY) {
+        // Diagonal movement against a corner - try to slide in both directions at reduced speed
+        let slideX = player.x + player.dx * WALL_SLIDE_MULTIPLIER;
+        let slideY = player.y + player.dy * WALL_SLIDE_MULTIPLIER;
+        
+        let canSlideX = true;
+        let canSlideY = true;
+        
+        for (let obs of currentMap.obstacles) {
+            if (circleRectCollision(slideX, player.y, radius, obs.x, obs.y, obs.w, obs.h)) {
+                canSlideX = false;
             }
-            let onObstacle=false;
+            if (circleRectCollision(player.x, slideY, radius, obs.x, obs.y, obs.w, obs.h)) {
+                canSlideY = false;
+            }
+        }
+        
+        if (canSlideX) {
+            player.x = slideX;
+            player.x = Math.max(radius, Math.min(MAP_WIDTH - radius, player.x));
+        }
+        if (canSlideY) {
+            player.y = slideY;
+            player.y = Math.max(radius, Math.min(MAP_HEIGHT - radius, player.y));
+        }
+    } else {
+        // No collision, move normally
+        player.x = newX;
+        player.y = newY2;
+        player.x = Math.max(radius, Math.min(MAP_WIDTH - radius, player.x));
+        player.y = Math.max(radius, Math.min(MAP_HEIGHT - radius, player.y));
+    }
+
+    // Handle being stuck on an obstacle (existing code)
+    let onObstacle = false;
+    for (let obs of currentMap.obstacles) {
+        if (circleRectCollision(player.x, player.y, radius, obs.x, obs.y, obs.w, obs.h)) {
+            onObstacle = true;
+            break;
+        }
+    }
+    
+    if (player.skin && player.skin.name === 'Ghost' && player.ghostTimer <= 0 && onObstacle) {
+        let attempts = 0;
+        while (onObstacle && attempts < 1000) {
+            player.x = Math.random() * (MAP_WIDTH - 2 * radius) + radius;
+            player.y = Math.random() * (MAP_HEIGHT - 2 * radius) + radius;
+            onObstacle = false;
             for (let obs of currentMap.obstacles) {
                 if (circleRectCollision(player.x, player.y, radius, obs.x, obs.y, obs.w, obs.h)) {
                     onObstacle = true;
                     break;
                 }
             }
-            if (!collides||(player.skin&&player.skin.name==='Ghost'&&player.ghostTimer>0)) {
-                player.x = newX;
-                player.y = newY;
-            } else if (player.skin && player.skin.name === 'Ghost' && player.ghostTimer <= 0 && onObstacle) {
-                let attempts = 0;
-                while (collides && attempts < 1000) {
-                    newX = Math.random() * (MAP_WIDTH - 2 * radius) + radius;
-                    newY = Math.random() * (MAP_HEIGHT - 2 * radius) + radius;
-                    collides = false;
-                    for (let obs of currentMap.obstacles) {
-                        if (circleRectCollision(newX, newY, radius, obs.x, obs.y, obs.w, obs.h)) {
-                            collides = true;
-                            break;
-                        }
-                    }
-                    attempts++;
-                }
-                if (!collides) {
-                    player.x = newX;
-                    player.y = newY;
-                }
-            }
+            attempts++;
         }
-
+    }
+}
         function checkCollision(p1, p2) {
             let wwwww=1;
             if (p1.skin&&p1.skin.name==="Tiny"){
@@ -1443,6 +1495,7 @@
 
 
         
+
 
 
 
