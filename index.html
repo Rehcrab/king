@@ -125,7 +125,7 @@
             <div id="skin-rules">
                 Each player selects a skin with unique stats and appearance:<br>
                 - Speedy: Faster movement speed<br>
-                - Tough: Immune to speed boosts and mud, larger size<br>
+                - Tough: Immune to mud, larger size<br>
                 - Tiny: Smaller size and slightly faster<br>
                 - Zoomer: Teleports forward with a trail (10s cooldown, stops at obstacles)<br>
                 - Heavy: Slower but larger, chance to stun opponent when they hit you<br>
@@ -724,10 +724,13 @@
                 speed = player.skin.speed*Math.pow(1.04,levels[thisisascam][1]);
             }  else if (player.skin.name==="Tiny"){
                 speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][2]);
-            } else {
+            } else if (player.skin.name==="Shield"){
+                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][2]);
+            } else if (player.skin.name==="Heavy"){
+                speed = player.skin.speed*Math.pow(1.02,levels[thisisascam][2]);
+            }else {
                 speed = player.skin.speed;
             }
-            if (player.skin.immune) return speed;
             if (player.sprintTimer > 0 && player.skin.name === 'Sprinter') {
                 speed *= player.skin.sprintMultiplier*Math.pow(1.10,levels[0][5]);
             }
@@ -915,7 +918,6 @@
             if (player===player2&&player.skin&&player.skin.name==="Tiny"){
                 wwwwww=Math.pow(0.9,levels[1][2]);
             }
-            if (player.skin && player.skin.immune) return;
             const radius = player.skin ? player.skin.size*wwwwww / 2 : BASE_PLAYER_RADIUS;
             for (let i = speedBoosts.length - 1; i >= 0; i--) {
                 const boost = speedBoosts[i];
@@ -1441,6 +1443,7 @@
 
 
         
+
 
 
 
