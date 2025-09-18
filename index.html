@@ -663,13 +663,13 @@
         }
         function upgradeSkin(whichUpSkin,whichUpPlayer){
             if (whichUpPlayer===0&&moneys[0]>=upgradeCosts[levels[0][whichUpSkin]]){
+                moneys[0]-=upgradeCosts[levels[0][whichUpSkin]];
                 levels[0][whichUpSkin]+=1;
-                moneys[0]-=upgradeCosts[levels[0][whichUpSkin-1]];
                 setBoxUp();
             }
             if (whichUpPlayer===1&&moneys[1]>=upgradeCosts[levels[1][whichUpSkin]]){
+                moneys[1]-=upgradeCosts[levels[1][whichUpSkin]];
                 levels[1][whichUpSkin]+=1;
-                moneys[1]-=upgradeCosts[levels[1][whichUpSkin-1]];
                 setBoxUp();
             }
             document.getElementById("p1money").innerHTML="Player 1: $"+moneys[0];
@@ -1441,6 +1441,7 @@
 
 
         
+
 
 
 
