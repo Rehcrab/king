@@ -809,7 +809,7 @@ function movePlayer(player) {
     }
 
     // Test movement in X and Y directions separately for wall sliding
-    let newX = player.x + player.dx;
+    let newX = player.x + player.dx * WALL_SLIDE_MULTIPLIER;
     let newY = player.y;
     
     let collidesX = false;
@@ -821,7 +821,7 @@ function movePlayer(player) {
     }
     
     let newX2 = player.x;
-    let newY2 = player.y + player.dy;
+    let newY2 = player.y + player.dy * WALL_SLIDE_MULTIPLIER;
     
     let collidesY = false;
     for (let obs of currentMap.obstacles) {
@@ -1200,14 +1200,17 @@ function movePlayer(player) {
             if (player2.skin&&player2.skin.name==="Tiny"){
                 scam1=Math.pow(0.9,levels[1][2]);
             }
+            if (player1.skin&&player1.skin.name==="Ghost"&&player1.ghostTimer<=0){
             ctx.arc(player1.x, player1.y, (player1.skin ? player1.skin.size / 2 : BASE_PLAYER_RADIUS), 0, Math.PI * 2);
             ctx.fill();
-
+            }
             ctx.fillStyle = player2.color;
             ctx.beginPath();
+                        if (player2.skin&&player2.skin.name==="Ghost"&&player2.ghostTimer<=0){
+
             ctx.arc(player2.x, player2.y, (player2.skin ? player2.skin.size / 2 : BASE_PLAYER_RADIUS), 0, Math.PI * 2);
             ctx.fill();
-
+                        }
             ctx.restore();
         }
 
@@ -1495,6 +1498,7 @@ function movePlayer(player) {
 
 
         
+
 
 
 
