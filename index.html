@@ -1412,8 +1412,8 @@ function movePlayer(player) {
                 winMessage.textContent = 'P2 Wins!';
                 winMessage.style.display = 'block';
                 restartButton.style.display = 'block';
-                moneys[1]+=90;
-                moneys[0]+=Math.floor(player1.holdTime/1000);
+                moneys[1]+=120;
+                moneys[0]+=2*Math.floor(player1.holdTime/1000)+40;
                 document.getElementById("p1money").innerHTML="Player 1: $"+moneys[0];
             document.getElementById("p2money").innerHTML="Player 2: $"+moneys[1];
             }
@@ -1516,6 +1516,7 @@ function movePlayer(player) {
 
 
         
+
 
 
 
